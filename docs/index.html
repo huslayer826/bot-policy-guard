@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bot-policy-guard</title>
+    <meta
+      name="description"
+      content="Offline CLI for auditing risky Renovate, Dependabot, and GitHub Actions dependency automation policy."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172026;
+        --muted: #5d6872;
+        --line: #d7dee4;
+        --paper: #f7f9fb;
+        --white: #ffffff;
+        --green: #18745b;
+        --red: #b93632;
+        --blue: #2f5f9f;
+        --amber: #a96300;
+        --shadow: 0 18px 50px rgba(23, 32, 38, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        line-height: 1.5;
+      }
+
+      a {
+        color: var(--blue);
+        text-decoration-thickness: 0.08em;
+        text-underline-offset: 0.18em;
+      }
+
+      .shell {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.92);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      nav {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .mark {
+        width: 32px;
+        height: 32px;
+        border: 2px solid var(--ink);
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        background: var(--white);
+      }
+
+      .mark svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-size: 0.95rem;
+      }
+
+      .hero {
+        background: var(--white);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hero-inner {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 72px 24px 48px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
+        gap: 48px;
+        align-items: center;
+      }
+
+      h1 {
+        font-size: clamp(3rem, 7vw, 5.8rem);
+        line-height: 0.95;
+        margin: 0 0 22px;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 680px;
+        color: var(--muted);
+        font-size: 1.2rem;
+        margin: 0 0 28px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .button {
+        border: 1px solid var(--ink);
+        border-radius: 7px;
+        background: var(--ink);
+        color: var(--white);
+        padding: 11px 16px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .button.secondary {
+        background: var(--white);
+        color: var(--ink);
+      }
+
+      .terminal {
+        background: #11171c;
+        color: #f1f5f8;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        border: 1px solid #26323b;
+      }
+
+      .terminal-bar {
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        background: #1d2730;
+        border-bottom: 1px solid #34414b;
+      }
+
+      .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+        background: var(--red);
+      }
+
+      .dot:nth-child(2) {
+        background: var(--amber);
+      }
+
+      .dot:nth-child(3) {
+        background: var(--green);
+      }
+
+      pre {
+        margin: 0;
+        padding: 22px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      code {
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      }
+
+      .section {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 54px 24px;
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 2rem;
+        letter-spacing: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .tile {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        min-height: 190px;
+      }
+
+      .tile strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .tile p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .risk-map {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .risk-cell {
+        background: var(--white);
+        min-height: 112px;
+        padding: 16px;
+      }
+
+      .risk-cell b {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .risk-cell span {
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .high b {
+        color: var(--red);
+      }
+
+      .medium b {
+        color: var(--amber);
+      }
+
+      .low b {
+        color: var(--green);
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 26px 24px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 820px) {
+        .hero-inner {
+          grid-template-columns: 1fr;
+          padding-top: 48px;
+        }
+
+        .grid,
+        .risk-map {
+          grid-template-columns: 1fr;
+        }
+
+        nav {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .nav-links {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <nav aria-label="Main navigation">
+          <div class="brand">
+            <span class="mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z" />
+                <path d="M9 12l2 2 4-5" />
+              </svg>
+            </span>
+            bot-policy-guard
+          </div>
+          <div class="nav-links">
+            <a href="#checks">Checks</a>
+            <a href="#output">Output</a>
+            <a href="https://github.com/huslayer826/bot-policy-guard">GitHub</a>
+          </div>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-inner">
+            <div>
+              <h1>bot-policy-guard</h1>
+              <p class="lede">
+                Audit Renovate, Dependabot, and GitHub Actions dependency automation
+                policy before risky bot defaults reach production.
+              </p>
+              <div class="actions">
+                <a class="button" href="#install">Install</a>
+                <a class="button secondary" href="#checks">View checks</a>
+              </div>
+            </div>
+            <div class="terminal" aria-label="Example terminal output">
+              <div class="terminal-bar">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <pre><code>$ bot-policy-guard . --fail-on medium
+Bot Policy Guard audit
+Scanned files: 3
+Findings: 4
+
+[HIGH] BPG-RENOVATE-AUTOMERGE-SOAK
+Renovate automerge has no release-age soak
+
+[MEDIUM] BPG-GHA-ACTION-NOT-PINNED
+Workflow uses 'actions/checkout@v4'</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="checks" class="section">
+          <h2>Policy Checks</h2>
+          <div class="grid">
+            <article class="tile">
+              <strong>Automerge control</strong>
+              <p>
+                Flags broad Renovate automerge and dependency bot automerge without a
+                release-age soak.
+              </p>
+            </article>
+            <article class="tile">
+              <strong>Review capacity</strong>
+              <p>
+                Detects missing update limits and missing groups that create noisy,
+                hard-to-review dependency PR streams.
+              </p>
+            </article>
+            <article class="tile">
+              <strong>Workflow safety</strong>
+              <p>
+                Finds unpinned GitHub Actions and broad token permissions around
+                dependency bot workflows.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="install">
+          <h2>Install</h2>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <pre><code>pip install bot-policy-guard
+bot-policy-guard /path/to/repo --format sarif --output bot-policy.sarif</code></pre>
+          </div>
+        </section>
+
+        <section id="output" class="section">
+          <h2>Output Formats</h2>
+          <div class="risk-map">
+            <div class="risk-cell high">
+              <b>Text</b>
+              <span>Human-readable terminal reports for local review.</span>
+            </div>
+            <div class="risk-cell medium">
+              <b>JSON</b>
+              <span>Structured findings for scripts and dashboards.</span>
+            </div>
+            <div class="risk-cell low">
+              <b>Markdown</b>
+              <span>Pull request comments, audit notes, and remediation issues.</span>
+            </div>
+            <div class="risk-cell medium">
+              <b>SARIF</b>
+              <span>Code scanning upload workflows and security reporting.</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>MIT licensed. Offline by default. No telemetry.</footer>
+    </div>
+  </body>
+</html>
